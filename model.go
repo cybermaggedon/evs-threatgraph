@@ -15,72 +15,124 @@ const (
 
 type PropertyMap map[string]interface{}
 
-type Element interface {
-	SetGroup(string) Element
-	SetClass(string) Element
-	AddProperty(string, interface{}) Element
+type TimestampSet map[uint64]bool
+
+type Edge struct {
+	Source string
+	Destination string
+	Group string
+	Count uint64
+	Time TimestampSet
 }
 
-type Edge map[string]interface{}
-
-func (e *Edge) SetGroup(group string) Element {
-	(*e)["group"] = group
-	return Element(e)
-}
-
-func (e *Edge) SetClass(class string) Element {
-	(*e)["class"] = class
-	return Element(e)
-}
-
-func (e *Edge) AddProperty(key string, value interface{}) Element {
-	// FIXME
-	return Element(e)
-	if _, ok := (*e)["properties"]; !ok {
-		(*e)["properties"] = PropertyMap{}
-	}
-	(*e)["properties"].(PropertyMap)[key] = value
-	return Element(e)
-}
-
-func NewEdge(source, destination, group string, directed bool) *Edge {
+func NewEdge(source, destination, group string) *Edge {
 	e := Edge{
-		"source": source,
-		"destination": destination,
-		"group": group,
-//		"directed": directed,
-//		"class": EDGE,
+		Source: source,
+		Destination: destination,
+		Group: group,
+		Time: TimestampSet{},
 	}
 	return &e
 }
 
-type Entity map[string]interface{}
-
-func (e *Entity) SetGroup(group string) Element {
-	(*e)["group"] = group
-	return Element(e)
+func (e *Edge) AddTime(tm time.Time) *Edge {
+	e.Time[uint64(tm.Unix())] = true
+	return e
 }
 
-func (e *Entity) SetClass(class string) Element {
-	(*e)["class"] = class
-	return Element(e)
+func (e *Edge) AddCount(count uint64) *Edge {
+	e.Count += count
+	return e
 }
 
-func (e *Entity) AddProperty(key string, value interface{}) Element {
-	// FIXME
-	return Element(e)
-	if _, ok := (*e)["properties"]; !ok {
-		(*e)["properties"] = PropertyMap{}
+func (e *Edge) Merge(e2 *Edge) {
+
+	e.Count += e2.Count
+
+	for k, _ := range e2.Time {
+		e.Time[k] = true
 	}
-	(*e)["properties"].(PropertyMap)[key] = value
-	return Element(e)
+	
+}
+
+func (e *Edge) ToGaffer() map[string]interface{} {
+
+	tset := make([]uint64, 0, len(e.Time))
+
+	for v, _ := range e.Time {
+		tset = append(tset, v)
+	}
+	
+	return map[string]interface{}{
+		"class": EDGE,
+		"group": e.Group,
+		"source": e.Source,
+		"destination": e.Destination,
+		"directed": true,
+		"properties": PropertyMap{
+			TIMESTAMP_SET: PropertyMap{
+				"timeBucket": TIME_BUCKET,
+				"timestamps": tset,
+			},
+			"count": e.Count,
+		},
+	}
+}
+
+type Entity struct {
+	Vertex string
+	Group string
+	Count uint64
+	Time TimestampSet
 }
 
 func NewEntity(vertex, group string) *Entity {
 	return &Entity{
-		"vertex": vertex,
-		"group": group,
-//		"class": ENTITY,
+		Vertex: vertex,
+		Group: group,
+		Time: TimestampSet{},
+	}
+}
+
+func (e *Entity) AddTime(tm time.Time) *Entity {
+	e.Time[uint64(tm.Unix())] = true
+	return e
+}
+
+func (e *Entity) AddCount(count uint64) *Entity {
+	e.Count += count
+	return e
+}
+
+func (e *Entity) Merge(e2 *Entity) {
+
+	e.Count += e2.Count
+
+	for k, _ := range e2.Time {
+		e.Time[k] = true
+	}
+	
+}
+
+func (e *Entity) ToGaffer() map[string]interface{} {
+
+	tset := make([]uint64, 0, len(e.Time))
+
+	for v, _ := range e.Time {
+		tset = append(tset, v)
+	}
+	
+	return map[string]interface{}{
+		"class": ENTITY,
+		"group": e.Group,
+		"vertex": e.Vertex,
+		"properties": PropertyMap{
+			TIMESTAMP_SET: PropertyMap{
+				"timeBucket": TIME_BUCKET,
+				"timestamps": tset,
+			},
+			"count": e.Count,
+		},
 	}
 }
 
@@ -109,61 +161,39 @@ func NewUseragent(v string) *Entity {
 }
 
 func NewIpflow(src, dest string) *Edge {
-	return NewEdge(src, dest, "ipflow", true)
+	return NewEdge(src, dest, "ipflow")
 }
 
 func NewHasip(s, d string) *Edge {
-	return NewEdge(s, d, "hasip", true)
+	return NewEdge(s, d, "hasip")
 }
 
 func NewDnsquery(s, d string) *Edge {
-	return NewEdge(s, d, "dnsquery", true)
+	return NewEdge(s, d, "dnsquery")
 }
 
 func NewDnsresolve(s, d string) *Edge {
-	return NewEdge(s, d, "dnsresolve", true)
+	return NewEdge(s, d, "dnsresolve")
 }
 
 func NewIndomain(s, d string) *Edge {
-	return NewEdge(s, d, "indomain", true)
+	return NewEdge(s, d, "indomain")
 }
 
 func NewRequests(s, d string) *Edge {
-	return NewEdge(s, d, "requests", true)
+	return NewEdge(s, d, "requests")
 }
 
 func NewServes(s, d string) *Edge {
-	return NewEdge(s, d, "serves", true)
+	return NewEdge(s, d, "serves")
 }
 
 func NewUses(s, d string) *Edge {
-	return NewEdge(s, d, "uses", true)
-}
-
-type TimestampSet PropertyMap
-
-// Create new timtestamp set.
-func NewTimestampSet(bucket string) *TimestampSet {
-	return nil
-	return &TimestampSet{
-		TIMESTAMP_SET: PropertyMap{
-			"timeBucket": bucket,
-			"timestamps": []uint64{},
-		},
-	}
-}
-
-// Add a time to a timestamp set.  We're look at UNIX time here.
-func (e *TimestampSet) Add(t time.Time) *TimestampSet {
-	return e
-	tss := (*e)[TIMESTAMP_SET].(PropertyMap)
-	tss["timestamps"] = append(tss["timestamps"].([]uint64),
-		uint64(t.Unix()))
-	return e
+	return NewEdge(s, d, "uses")
 }
 
 // Handle a single JSON object.
-func DescribeThreatElements(ev *evs.Event) ([]interface{}, error) {
+func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 
 	tm, _ := ptypes.Timestamp(ev.Time)
 
@@ -189,29 +219,36 @@ func DescribeThreatElements(ev *evs.Event) ([]interface{}, error) {
 		}
 	}
 
-	elts := []interface{}{}
-
-	tset := NewTimestampSet(TIME_BUCKET).Add(tm)
+	entities := []*Entity{}
+	edges := []*Edge{}
 
 	// Add ipflow edge between two IPs.
-	sipe := NewIp(sip).AddProperty("time", tset)
-	elts = append(elts, sipe)
+	sipe := NewIp(sip).AddTime(tm).AddCount(1)
+	entities = append(entities, sipe)
 
-	dipe := NewIp(dip).AddProperty("time", tset)
-	elts = append(elts, dipe)
+	dipe := NewIp(dip).AddTime(tm).AddCount(1)
+	entities = append(entities, dipe)
 
-	flowe := NewIpflow(sip, dip).AddProperty("time", tset)
-	elts = append(elts, flowe)
+	flowe := NewIpflow(sip, dip).
+		AddTime(tm).
+		AddCount(1)
+	edges = append(edges, flowe)
 
-	deve := NewDevice(ev.Device).AddProperty("time", tset)
+	deve := NewDevice(ev.Device).
+		AddTime(tm).
+		AddCount(1)
 	if ev.Origin == evs.Origin_device {
-		elts = append(elts, deve)
-		hasipe := NewHasip(ev.Device, sip).AddProperty("time", tset)
-		elts = append(elts, hasipe)
+		entities = append(entities, deve)
+		hasipe := NewHasip(ev.Device, sip).
+			AddTime(tm).
+			AddCount(1)
+		edges = append(edges, hasipe)
 	} else if ev.Origin == evs.Origin_network {
-		elts = append(elts, deve)
-		hasipe := NewHasip(ev.Device, dip).AddProperty("time", tset)
-		elts = append(elts, hasipe)
+		entities = append(entities, deve)
+		hasipe := NewHasip(ev.Device, dip).
+			AddTime(tm).
+			AddCount(1)
+		edges = append(edges, hasipe)
 	}
 
 	switch ev.Detail.(type) {
@@ -223,22 +260,26 @@ func DescribeThreatElements(ev *evs.Event) ([]interface{}, error) {
 			for _, v := range msg.Query {
 				if v.Name != "" {
 					hoste := NewHostname(v.Name).
-						AddProperty("time", tset)
-					elts = append(elts, hoste)
+						AddTime(tm).
+						AddCount(1)
+					entities = append(entities, hoste)
 					dnsqe := NewDnsquery(sip, v.Name).
-						AddProperty("time", tset)
-					elts = append(elts, dnsqe)
+						AddTime(tm).
+						AddCount(1)
+					edges = append(edges, dnsqe)
 				}
 
 				dmn := ExtractDomain(v.Name)
 
 				if dmn != "" {
 					dmne := NewDomain(dmn).
-						AddProperty("time", tset)
-					elts = append(elts, dmne)
+						AddTime(tm).
+						AddCount(1)
+					entities = append(entities, dmne)
 					inde := NewIndomain(v.Name, dmn).
-						AddProperty("time", tset)
-					elts = append(elts, inde)
+						AddTime(tm).
+						AddCount(1)
+					edges = append(edges, inde)
 				}
 
 			}
@@ -247,22 +288,26 @@ func DescribeThreatElements(ev *evs.Event) ([]interface{}, error) {
 				if v.Name != "" && v.Address != nil {
 					addr := evs.AddressToString(v.Address)
 					hoste := NewHostname(v.Name).
-						AddProperty("time", tset)
-					elts = append(elts, hoste)
+						AddTime(tm).
+						AddCount(1)
+					entities = append(entities, hoste)
 					dnsqe := NewDnsresolve(v.Name, addr).
-						AddProperty("time", tset)
-					elts = append(elts, dnsqe)
+						AddTime(tm).
+						AddCount(1)
+					edges = append(edges, dnsqe)
 				}
 
 				dmn := ExtractDomain(v.Name)
 
 				if dmn != "" {
 					dmne := NewDomain(dmn).
-						AddProperty("time", tset)
-					elts = append(elts, dmne)
+						AddTime(tm).
+						AddCount(1)
+					entities = append(entities, dmne)
 					inde := NewIndomain(v.Name, dmn).
-						AddProperty("time", tset)
-					elts = append(elts, inde)
+						AddTime(tm).
+						AddCount(1)
+					edges = append(edges, inde)
 				}
 
 			}
@@ -277,48 +322,37 @@ func DescribeThreatElements(ev *evs.Event) ([]interface{}, error) {
 		if host != "" {
 
 			servere := NewServer(host).
-				AddProperty("time", tset)
-			elts = append(elts, servere)
+				AddTime(tm).
+				AddCount(1)
+			entities = append(entities, servere)
 
 			requestse := NewRequests(sip, host).
-				AddProperty("time", tset)
-			elts = append(elts, requestse)
+				AddTime(tm).
+				AddCount(1)
+			edges = append(edges, requestse)
 
 			servese := NewServes(dip, host).
-				AddProperty("time", tset)
-			elts = append(elts, servese)
+				AddTime(tm).
+				AddCount(1)
+			edges = append(edges, servese)
 
 		}
 
 		if ua != "" {
 			uae := NewUseragent(ua).
-				AddProperty("time", tset)
-			elts = append(elts, uae)
+				AddTime(tm).
+				AddCount(1)
+			entities = append(entities, uae)
 
 			usesagent := NewUses(sip, ua).
-				AddProperty("time", tset)
-			elts = append(elts, usesagent)
+				AddTime(tm).
+				AddCount(1)
+			edges = append(edges, usesagent)
 		}
 
 	}
 
-	return elts, nil
+	return entities, edges, nil
 
 }
 
-/*
-func DescribeThreatGraph(e dt.Event) (interface{}, error) {
-
-	s := NewSummary()
-
-	res, tm, _ := DescribeThreatElements(e)
-	for _, v := range res {
-		v.Update(&s, tm)
-	}
-
-	g, _ := s.ToGraph()
-
-	return g, nil
-
-}
-*/

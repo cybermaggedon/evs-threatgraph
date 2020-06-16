@@ -17,8 +17,8 @@ func NewConfig() *Config {
 		url: "http://threatgraph:8080/rest/v2",
 		max_idle_conns: 50,
 		max_idle_conns_per_host: 5,
-		connect_timeout: 5,
-		refresh_time: 5,
+		connect_timeout: 5 * time.Second,
+		refresh_time: 30 * time.Second,
 	}
 }
 

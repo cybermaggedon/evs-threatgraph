@@ -5,13 +5,11 @@
 package main
 
 import (
-	"fmt"
 	evs "github.com/cybermaggedon/evs-golang-api"
 	"log"
 	"os"
 	"time"
 	"strconv"
-	"encoding/json"
 )
 
 const ()
@@ -21,7 +19,7 @@ type ThreatGraph struct {
 	// Embed EventAnalytic framework
 	evs.EventAnalytic
 
-	gaffer interface{}
+	gaffer *Gaffer
 
 }
 
@@ -69,10 +67,12 @@ func (a *ThreatGraph) Init(binding string) error {
 // Event handler for new events.
 func (a *ThreatGraph) Event(ev *evs.Event, props map[string]string) error {
 
-	stuf, _ := DescribeThreatElements(ev)
+	entities, edges, _ := DescribeThreatElements(ev)
 
-	b, _ := json.MarshalIndent(stuf, "", "    ")
-	fmt.Println(string(b))
+	a.gaffer.AddElements(entities, edges)
+
+//	b, _ := json.MarshalIndent(stuf, "", "    ")
+//	fmt.Println(string(b))
 
 	
 	return nil
