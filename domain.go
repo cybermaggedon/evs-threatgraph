@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -26,7 +25,7 @@ import (
 
 var (
 	re = regexp.MustCompile(
-		"([^.]+)" + 
+		"([^.]+)" +
 			"(\\.(gov|judiciary|police|nhs|co|ac|nic|net|mod|parliament|plc|ltd|sch)\\.uk|" +
 			"\\.(fed|isa|nsn|dni|..)\\.us|\\.[^.]+)$")
 )
@@ -39,4 +38,3 @@ func ExtractDomain(s string) string {
 		return matched[1] + matched[2]
 	}
 }
-

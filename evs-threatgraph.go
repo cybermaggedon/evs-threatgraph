@@ -1,15 +1,11 @@
-//
-// ElasticSearch loader.  Maps events to an ElasticSearch schema.
-//
-
 package main
 
 import (
 	evs "github.com/cybermaggedon/evs-golang-api"
 	"log"
 	"os"
-	"time"
 	"strconv"
+	"time"
 )
 
 const ()
@@ -20,7 +16,6 @@ type ThreatGraph struct {
 	evs.EventAnalytic
 
 	gaffer *Gaffer
-
 }
 
 // Initialisation
@@ -71,12 +66,8 @@ func (a *ThreatGraph) Event(ev *evs.Event, props map[string]string) error {
 
 	a.gaffer.AddElements(entities, edges)
 
-//	b, _ := json.MarshalIndent(stuf, "", "    ")
-//	fmt.Println(string(b))
-
-	
 	return nil
-	
+
 }
 
 func main() {

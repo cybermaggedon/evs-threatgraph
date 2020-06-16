@@ -2,50 +2,50 @@ package main
 
 import (
 	//	"fmt"
-	"log"
-	"time"
 	"encoding/json"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
-	"io/ioutil"
+	"time"
 )
 
 type EdgeKey struct {
-	Source string
+	Source      string
 	Destination string
-	Group string
+	Group       string
 }
 
 type EntityKey struct {
 	Vertex string
-	Group string
+	Group  string
 }
 
 type Gaffer struct {
 	Config
-	edge_buffer map[EdgeKey]*Edge
+	edge_buffer   map[EdgeKey]*Edge
 	entity_buffer map[EntityKey]*Entity
-	bufferq chan *Update
-	loadq chan *[]interface{}
+	bufferq       chan *Update
+	loadq         chan *[]interface{}
 }
 
 type Update struct {
 	entities []*Entity
-	edges []*Edge
+	edges    []*Edge
 }
 
 func (c Config) Build() (*Gaffer, error) {
 	g := &Gaffer{
-		Config: c,
-		edge_buffer: map[EdgeKey]*Edge{},
+		Config:        c,
+		edge_buffer:   map[EdgeKey]*Edge{},
 		entity_buffer: map[EntityKey]*Entity{},
-		bufferq: make(chan *Update, 5000),
-		loadq: make(chan *[]interface{}, 50),
+		bufferq:       make(chan *Update, 5000),
+		loadq:         make(chan *[]interface{}, 50),
 	}
 
 	go g.Loader()
 	go g.BufferManager()
-	
+
 	return g, nil
 }
 
@@ -67,10 +67,10 @@ func (g *Gaffer) Loader() error {
 			tp.CloseIdleConnections()
 		}
 	}()
-	
+
 	for {
 
-		b := <- g.loadq
+		b := <-g.loadq
 
 		j, err := json.Marshal(&b)
 		if err != nil {
@@ -83,7 +83,7 @@ func (g *Gaffer) Loader() error {
 		for {
 
 			req, _ := http.NewRequest("POST",
-				g.url + "/graph/operations/execute",
+				g.url+"/graph/operations/execute",
 				strings.NewReader(string(j)))
 			req.ContentLength = int64(len(j))
 			req.Header.Set("Content-Type", "application/json")
@@ -129,7 +129,6 @@ func (g *Gaffer) Loader() error {
 	return nil
 }
 
-
 func (g *Gaffer) BufferManager() {
 
 	// FIXME: Make configurable
@@ -138,7 +137,7 @@ func (g *Gaffer) BufferManager() {
 	for {
 
 		select {
-		case <- ticker.C:
+		case <-ticker.C:
 
 			elts := []interface{}{}
 
@@ -157,20 +156,20 @@ func (g *Gaffer) BufferManager() {
 			g.edge_buffer = map[EdgeKey]*Edge{}
 			g.entity_buffer = map[EntityKey]*Entity{}
 
-		case update := <- g.bufferq:
+		case update := <-g.bufferq:
 
 			g.AddBuffer(update)
 
 		}
 	}
-	
+
 }
 
 func (g *Gaffer) AddEntity(e *Entity) {
-	
+
 	k := EntityKey{
 		Vertex: e.Vertex,
-		Group: e.Group,
+		Group:  e.Group,
 	}
 
 	if _, ok := g.entity_buffer[k]; !ok {
@@ -183,11 +182,11 @@ func (g *Gaffer) AddEntity(e *Entity) {
 }
 
 func (g *Gaffer) AddEdge(e *Edge) {
-	
+
 	k := EdgeKey{
-		Source: e.Source,
+		Source:      e.Source,
 		Destination: e.Destination,
-		Group: e.Group,
+		Group:       e.Group,
 	}
 
 	if _, ok := g.edge_buffer[k]; !ok {
@@ -200,7 +199,7 @@ func (g *Gaffer) AddEdge(e *Edge) {
 }
 
 func (g *Gaffer) AddBuffer(u *Update) {
-	
+
 	for _, v := range u.entities {
 		g.AddEntity(v)
 	}
@@ -212,9 +211,9 @@ func (g *Gaffer) AddBuffer(u *Update) {
 }
 
 func (g *Gaffer) AddElements(entities []*Entity, edges []*Edge) {
-	g.bufferq <- &Update {
+	g.bufferq <- &Update{
 		entities: entities,
-		edges: edges,
+		edges:    edges,
 	}
-	
+
 }

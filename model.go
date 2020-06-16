@@ -1,16 +1,16 @@
 package main
 
 import (
-	"time"
 	evs "github.com/cybermaggedon/evs-golang-api"
 	"github.com/golang/protobuf/ptypes"
+	"time"
 )
 
 const (
-	ENTITY = "uk.gov.gchq.gaffer.data.element.Entity"
-	EDGE = "uk.gov.gchq.gaffer.data.element.Edge"
+	ENTITY        = "uk.gov.gchq.gaffer.data.element.Entity"
+	EDGE          = "uk.gov.gchq.gaffer.data.element.Edge"
 	TIMESTAMP_SET = "uk.gov.gchq.gaffer.time.RBMBackedTimestampSet"
-	TIME_BUCKET = "HOUR"
+	TIME_BUCKET   = "HOUR"
 )
 
 type PropertyMap map[string]interface{}
@@ -18,19 +18,19 @@ type PropertyMap map[string]interface{}
 type TimestampSet map[uint64]bool
 
 type Edge struct {
-	Source string
+	Source      string
 	Destination string
-	Group string
-	Count uint64
-	Time TimestampSet
+	Group       string
+	Count       uint64
+	Time        TimestampSet
 }
 
 func NewEdge(source, destination, group string) *Edge {
 	e := Edge{
-		Source: source,
+		Source:      source,
 		Destination: destination,
-		Group: group,
-		Time: TimestampSet{},
+		Group:       group,
+		Time:        TimestampSet{},
 	}
 	return &e
 }
@@ -52,7 +52,7 @@ func (e *Edge) Merge(e2 *Edge) {
 	for k, _ := range e2.Time {
 		e.Time[k] = true
 	}
-	
+
 }
 
 func (e *Edge) ToGaffer() map[string]interface{} {
@@ -62,13 +62,13 @@ func (e *Edge) ToGaffer() map[string]interface{} {
 	for v, _ := range e.Time {
 		tset = append(tset, v)
 	}
-	
+
 	return map[string]interface{}{
-		"class": EDGE,
-		"group": e.Group,
-		"source": e.Source,
+		"class":       EDGE,
+		"group":       e.Group,
+		"source":      e.Source,
 		"destination": e.Destination,
-		"directed": true,
+		"directed":    true,
 		"properties": PropertyMap{
 			TIMESTAMP_SET: PropertyMap{
 				"timeBucket": TIME_BUCKET,
@@ -81,16 +81,16 @@ func (e *Edge) ToGaffer() map[string]interface{} {
 
 type Entity struct {
 	Vertex string
-	Group string
-	Count uint64
-	Time TimestampSet
+	Group  string
+	Count  uint64
+	Time   TimestampSet
 }
 
 func NewEntity(vertex, group string) *Entity {
 	return &Entity{
 		Vertex: vertex,
-		Group: group,
-		Time: TimestampSet{},
+		Group:  group,
+		Time:   TimestampSet{},
 	}
 }
 
@@ -111,7 +111,7 @@ func (e *Entity) Merge(e2 *Entity) {
 	for k, _ := range e2.Time {
 		e.Time[k] = true
 	}
-	
+
 }
 
 func (e *Entity) ToGaffer() map[string]interface{} {
@@ -121,10 +121,10 @@ func (e *Entity) ToGaffer() map[string]interface{} {
 	for v, _ := range e.Time {
 		tset = append(tset, v)
 	}
-	
+
 	return map[string]interface{}{
-		"class": ENTITY,
-		"group": e.Group,
+		"class":  ENTITY,
+		"group":  e.Group,
 		"vertex": e.Vertex,
 		"properties": PropertyMap{
 			TIMESTAMP_SET: PropertyMap{
@@ -255,7 +255,7 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 	case *evs.Event_DnsMessage:
 
 		msg := ev.GetDnsMessage()
-		
+
 		if msg.Type == evs.DnsMessageType_query {
 			for _, v := range msg.Query {
 				if v.Name != "" {
@@ -355,4 +355,3 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 	return entities, edges, nil
 
 }
-

@@ -5,20 +5,20 @@ import (
 )
 
 type Config struct {
-	url  string
-	max_idle_conns    uint
-	max_idle_conns_per_host  uint
-	connect_timeout    time.Duration
-	refresh_time    time.Duration
+	url                     string
+	max_idle_conns          uint
+	max_idle_conns_per_host uint
+	connect_timeout         time.Duration
+	refresh_time            time.Duration
 }
 
 func NewConfig() *Config {
 	return &Config{
-		url: "http://threatgraph:8080/rest/v2",
-		max_idle_conns: 50,
+		url:                     "http://threatgraph:8080/rest/v2",
+		max_idle_conns:          50,
 		max_idle_conns_per_host: 5,
-		connect_timeout: 5 * time.Second,
-		refresh_time: 30 * time.Second,
+		connect_timeout:         5 * time.Second,
+		refresh_time:            30 * time.Second,
 	}
 }
 
