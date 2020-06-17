@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -82,8 +81,6 @@ func (g *Gaffer) Loader() error {
 			log.Printf("Couldn't marshal json: %s", err.Error())
 			return nil
 		}
-
-		fmt.Println(string(j))
 
 		retries := 50
 
