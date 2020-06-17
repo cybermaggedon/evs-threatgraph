@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// Gaffer object types etc.
 const (
 	ENTITY        = "uk.gov.gchq.gaffer.data.element.Entity"
 	EDGE          = "uk.gov.gchq.gaffer.data.element.Edge"
@@ -13,10 +14,13 @@ const (
 	TIME_BUCKET   = "HOUR"
 )
 
+// Type of Gaffer properties
 type PropertyMap map[string]interface{}
 
+// We handle a timestamp set as a map internally.
 type TimestampSet map[uint64]bool
 
+// Gaffer edge
 type Edge struct {
 	Source      string
 	Destination string
@@ -25,6 +29,7 @@ type Edge struct {
 	Time        TimestampSet
 }
 
+// Create a new edge object
 func NewEdge(source, destination, group string) *Edge {
 	e := Edge{
 		Source:      source,
@@ -35,16 +40,20 @@ func NewEdge(source, destination, group string) *Edge {
 	return &e
 }
 
+// Add time to an edge object
 func (e *Edge) AddTime(tm time.Time) *Edge {
 	e.Time[uint64(tm.Unix())] = true
 	return e
 }
 
+// Add to an edge object's count
 func (e *Edge) AddCount(count uint64) *Edge {
 	e.Count += count
 	return e
 }
 
+// Combine two edge objects by adding count/time information from second
+// to first.
 func (e *Edge) Merge(e2 *Edge) {
 
 	e.Count += e2.Count
@@ -55,6 +64,7 @@ func (e *Edge) Merge(e2 *Edge) {
 
 }
 
+// Converts edge objects to Gaffer representation.
 func (e *Edge) ToGaffer() map[string]interface{} {
 
 	tset := make([]uint64, 0, len(e.Time))
@@ -81,6 +91,7 @@ func (e *Edge) ToGaffer() map[string]interface{} {
 	}
 }
 
+// Gaffer entity object
 type Entity struct {
 	Vertex string
 	Group  string
@@ -88,6 +99,7 @@ type Entity struct {
 	Time   TimestampSet
 }
 
+// Create a new entity object
 func NewEntity(vertex, group string) *Entity {
 	return &Entity{
 		Vertex: vertex,
@@ -96,16 +108,20 @@ func NewEntity(vertex, group string) *Entity {
 	}
 }
 
+// Add time to an entity object
 func (e *Entity) AddTime(tm time.Time) *Entity {
 	e.Time[uint64(tm.Unix())] = true
 	return e
 }
 
+// Add to an entity object's count
 func (e *Entity) AddCount(count uint64) *Entity {
 	e.Count += count
 	return e
 }
 
+// Combine two entity objects by adding count/time information from second
+// to first.
 func (e *Entity) Merge(e2 *Entity) {
 
 	e.Count += e2.Count
@@ -116,6 +132,7 @@ func (e *Entity) Merge(e2 *Entity) {
 
 }
 
+// Converts entity objects to Gaffer representation.
 func (e *Entity) ToGaffer() map[string]interface{} {
 
 	tset := make([]uint64, 0, len(e.Time))
@@ -140,71 +157,33 @@ func (e *Entity) ToGaffer() map[string]interface{} {
 	}
 }
 
-func NewIp(address string) *Entity {
-	return NewEntity(address, "ip")
-}
+// Helper functions to create various entities.
+func NewIp(address string) *Entity  { return NewEntity(address, "ip") }
+func NewDevice(v string) *Entity    { return NewEntity(v, "device") }
+func NewHostname(v string) *Entity  { return NewEntity(v, "hostname") }
+func NewDomain(v string) *Entity    { return NewEntity(v, "domain") }
+func NewServer(v string) *Entity    { return NewEntity(v, "server") }
+func NewUseragent(v string) *Entity { return NewEntity(v, "useragent") }
 
-func NewDevice(v string) *Entity {
-	return NewEntity(v, "device")
-}
+// Helper functions to create various edges
+func NewIpflow(src, dest string) *Edge { return NewEdge(src, dest, "ipflow") }
+func NewHasip(s, d string) *Edge       { return NewEdge(s, d, "hasip") }
+func NewDnsquery(s, d string) *Edge    { return NewEdge(s, d, "dnsquery") }
+func NewDnsresolve(s, d string) *Edge  { return NewEdge(s, d, "dnsresolve") }
+func NewIndomain(s, d string) *Edge    { return NewEdge(s, d, "indomain") }
+func NewRequests(s, d string) *Edge    { return NewEdge(s, d, "requests") }
+func NewServes(s, d string) *Edge      { return NewEdge(s, d, "serves") }
+func NewUses(s, d string) *Edge        { return NewEdge(s, d, "uses") }
 
-func NewHostname(v string) *Entity {
-	return NewEntity(v, "hostname")
-}
-
-func NewDomain(v string) *Entity {
-	return NewEntity(v, "domain")
-}
-
-func NewServer(v string) *Entity {
-	return NewEntity(v, "server")
-}
-
-func NewUseragent(v string) *Entity {
-	return NewEntity(v, "useragent")
-}
-
-func NewIpflow(src, dest string) *Edge {
-	return NewEdge(src, dest, "ipflow")
-}
-
-func NewHasip(s, d string) *Edge {
-	return NewEdge(s, d, "hasip")
-}
-
-func NewDnsquery(s, d string) *Edge {
-	return NewEdge(s, d, "dnsquery")
-}
-
-func NewDnsresolve(s, d string) *Edge {
-	return NewEdge(s, d, "dnsresolve")
-}
-
-func NewIndomain(s, d string) *Edge {
-	return NewEdge(s, d, "indomain")
-}
-
-func NewRequests(s, d string) *Edge {
-	return NewEdge(s, d, "requests")
-}
-
-func NewServes(s, d string) *Edge {
-	return NewEdge(s, d, "serves")
-}
-
-func NewUses(s, d string) *Edge {
-	return NewEdge(s, d, "uses")
-}
-
-// Handle a single JSON object.
+// Takes an event and outputs the threatgraph elements.
 func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 
+	// Get timestamp rounded to nearest second.
 	tm, _ := ptypes.Timestamp(ev.Time)
-
 	tm = tm.Round(time.Second)
 
+	// Get src/dest IP address as string
 	var sip, dip string
-
 	for _, addr := range ev.Src {
 		if addr.Protocol == evs.Protocol_ipv4 {
 			sip = evs.Int32ToIp(addr.Address.GetIpv4()).String()
@@ -213,7 +192,6 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 			sip = evs.BytesToIp(addr.Address.GetIpv6()).String()
 		}
 	}
-
 	for _, addr := range ev.Dest {
 		if addr.Protocol == evs.Protocol_ipv4 {
 			dip = evs.Int32ToIp(addr.Address.GetIpv4()).String()
@@ -223,6 +201,7 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 		}
 	}
 
+	// Start with empty arrays
 	entities := []*Entity{}
 	edges := []*Edge{}
 
@@ -238,6 +217,7 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 		AddCount(1)
 	edges = append(edges, flowe)
 
+	// Add hasip edge between device and IP
 	deve := NewDevice(ev.Device).
 		AddTime(tm).
 		AddCount(1)
@@ -255,12 +235,18 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 		edges = append(edges, hasipe)
 	}
 
+	// Get into protocol detail
 	switch ev.Detail.(type) {
+
+	// DNS message
 	case *evs.Event_DnsMessage:
 
 		msg := ev.GetDnsMessage()
 
 		if msg.Type == evs.DnsMessageType_query {
+
+			// Handle query as dnsquery edges
+
 			for _, v := range msg.Query {
 				if v.Name != "" {
 					hoste := NewHostname(v.Name).
@@ -288,6 +274,9 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 
 			}
 		} else if msg.Type == evs.DnsMessageType_response {
+
+			// Handle response as dnsresolve edges
+
 			for _, v := range msg.Answer {
 				if v.Name != "" && v.Address != nil {
 					addr := evs.AddressToString(v.Address)
@@ -318,6 +307,9 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 		}
 
 	case *evs.Event_HttpRequest:
+
+		// HTTP request record has/useragent, requests/server  and
+		// serves/server.
 
 		msg := ev.GetHttpRequest()
 		host := msg.Header["Host"]
