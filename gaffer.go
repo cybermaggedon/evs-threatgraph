@@ -1,13 +1,18 @@
 package main
 
 import (
-	//	"fmt"
+	"fmt"
 	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+)
+
+const (
+	OPERATION_CHAIN = "uk.gov.gchq.gaffer.operation.OperationChain"
+	ADD_ELEMENTS = "uk.gov.gchq.gaffer.operation.impl.add.AddElements"
 )
 
 type EdgeKey struct {
@@ -26,7 +31,7 @@ type Gaffer struct {
 	edge_buffer   map[EdgeKey]*Edge
 	entity_buffer map[EntityKey]*Entity
 	bufferq       chan *Update
-	loadq         chan *[]interface{}
+	loadq         chan *map[string]interface{}
 }
 
 type Update struct {
@@ -40,7 +45,7 @@ func (c Config) Build() (*Gaffer, error) {
 		edge_buffer:   map[EdgeKey]*Edge{},
 		entity_buffer: map[EntityKey]*Entity{},
 		bufferq:       make(chan *Update, 5000),
-		loadq:         make(chan *[]interface{}, 50),
+		loadq:         make(chan *map[string]interface{}, 50),
 	}
 
 	go g.Loader()
@@ -77,6 +82,8 @@ func (g *Gaffer) Loader() error {
 			log.Printf("Couldn't marshal json: %s", err.Error())
 			return nil
 		}
+
+		fmt.Println(string(j))
 
 		retries := 50
 
@@ -149,8 +156,15 @@ func (g *Gaffer) BufferManager() {
 				elts = append(elts, v.ToGaffer())
 			}
 
+			op := map[string]interface{}{
+				"class": ADD_ELEMENTS,
+				"validate": true,
+				"skipInvalidElements": false,
+				"input": elts,
+			}
+
 			if len(elts) > 0 {
-				g.loadq <- &elts
+				g.loadq <- &op
 			}
 
 			g.edge_buffer = map[EdgeKey]*Edge{}

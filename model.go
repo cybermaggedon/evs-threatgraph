@@ -70,9 +70,11 @@ func (e *Edge) ToGaffer() map[string]interface{} {
 		"destination": e.Destination,
 		"directed":    true,
 		"properties": PropertyMap{
-			TIMESTAMP_SET: PropertyMap{
-				"timeBucket": TIME_BUCKET,
-				"timestamps": tset,
+			"time": PropertyMap{
+				TIMESTAMP_SET: PropertyMap{
+					"timeBucket": TIME_BUCKET,
+					"timestamps": tset,
+				},
 			},
 			"count": e.Count,
 		},
@@ -127,9 +129,11 @@ func (e *Entity) ToGaffer() map[string]interface{} {
 		"group":  e.Group,
 		"vertex": e.Vertex,
 		"properties": PropertyMap{
-			TIMESTAMP_SET: PropertyMap{
-				"timeBucket": TIME_BUCKET,
-				"timestamps": tset,
+			"time": PropertyMap{
+				TIMESTAMP_SET: PropertyMap{
+					"timeBucket": TIME_BUCKET,
+					"timestamps": tset,
+				},
 			},
 			"count": e.Count,
 		},
