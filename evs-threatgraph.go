@@ -2,77 +2,50 @@ package main
 
 import (
 	evs "github.com/cybermaggedon/evs-golang-api"
+	pb "github.com/cybermaggedon/evs-golang-api/protos"
 	"log"
-	"os"
-	"strconv"
-	"time"
 )
 
 const ()
 
 type ThreatGraph struct {
 
+	*Config
+	
 	// Embed EventAnalytic framework
-	evs.EventAnalytic
+	*evs.EventSubscriber
+	evs.Interruptible
 
 	// Gaffer management
 	gaffer *Gaffer
 }
 
 // Initialisation
-func (a *ThreatGraph) Init(binding string) error {
+func NewThreatGraph(c *Config) *ThreatGraph {
 
-	// Get new configuration
-	c := NewConfig()
+	t := &ThreatGraph{
+		Config: c,
+	}
 
-	// Override configuration with values set in environment
-	if val, ok := os.LookupEnv("GAFFER_URL"); ok {
-		c = c.Url(val)
+	var err error
+	t.EventSubscriber, err = evs.NewEventSubscriber(t.Name, t.Input, t)
+	if err != nil {
+		log.Fatal(err)
 	}
-	if val, ok := os.LookupEnv("MAX_IDLE_CONNS"); ok {
-		max, _ := strconv.Atoi(val)
-		c = c.MaxIdleConns(uint(max))
-	}
-	if val, ok := os.LookupEnv("MAX_IDLE_CONNS_PER_HOST"); ok {
-		max, _ := strconv.Atoi(val)
-		c = c.MaxIdleConnsPerHost(uint(max))
-	}
-	if val, ok := os.LookupEnv("CONNECT_TIMEOUT"); ok {
-		dur, err := time.ParseDuration(val)
-		if err != nil {
-			return err
-		}
-		c = c.ConnectTimeout(dur)
-	}
-	if val, ok := os.LookupEnv("REFRESH_TIME"); ok {
-		dur, err := time.ParseDuration(val)
-		if err != nil {
-			return err
-		}
-		c = c.RefreshTime(dur)
-	}
-	if val, ok := os.LookupEnv("FLUSH_TIME"); ok {
-		dur, err := time.ParseDuration(val)
-		if err != nil {
-			return err
-		}
-		c = c.FlushTime(dur)
-	}
+
+	t.RegisterStop(t)
 
 	// Initialise Gaffer from configuration
-	var err error
-	a.gaffer, err = c.Build()
+	t.gaffer, err = t.Build()
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
-	// Initialise analytic framework
-	a.EventAnalytic.Init(binding, []string{}, a)
-	return nil
+	return t
 }
 
 // Event handler for new events.
-func (a *ThreatGraph) Event(ev *evs.Event, props map[string]string) error {
+func (a *ThreatGraph) Event(ev *pb.Event, props map[string]string) error {
 
 	// Convert event to threatgraph model
 	entities, edges, _ := DescribeThreatElements(ev)
@@ -86,27 +59,10 @@ func (a *ThreatGraph) Event(ev *evs.Event, props map[string]string) error {
 
 func main() {
 
-	// Initialise analytic object
-	a := &ThreatGraph{}
-
-	// Get input queue name
-	binding, ok := os.LookupEnv("INPUT")
-	if !ok {
-		binding = "ioc"
-	}
-
-	// Initialise analytic with input queue
-	err := a.Init(binding)
-	if err != nil {
-		log.Printf("Init: %v", err)
-		return
-	}
-
-	log.Print("Initialisation complete.")
-
-	// Handle events until shutdown
-	a.Run()
-
-	log.Print("Shutdown complete.")
+	gc := NewConfig()
+	g := NewThreatGraph(gc)
+	log.Print("Initialisation complete")
+	g.Run()
+	log.Print("Shutdown.")
 
 }

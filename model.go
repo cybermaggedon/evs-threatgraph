@@ -1,7 +1,8 @@
 package main
 
 import (
-	evs "github.com/cybermaggedon/evs-golang-api"
+	"github.com/cybermaggedon/evs-golang-api"
+	pb "github.com/cybermaggedon/evs-golang-api/protos"
 	"github.com/golang/protobuf/ptypes"
 	"time"
 )
@@ -176,7 +177,7 @@ func NewServes(s, d string) *Edge      { return NewEdge(s, d, "serves") }
 func NewUses(s, d string) *Edge        { return NewEdge(s, d, "uses") }
 
 // Takes an event and outputs the threatgraph elements.
-func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
+func DescribeThreatElements(ev *pb.Event) ([]*Entity, []*Edge, error) {
 
 	// Get timestamp rounded to nearest second.
 	tm, _ := ptypes.Timestamp(ev.Time)
@@ -185,18 +186,18 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 	// Get src/dest IP address as string
 	var sip, dip string
 	for _, addr := range ev.Src {
-		if addr.Protocol == evs.Protocol_ipv4 {
+		if addr.Protocol == pb.Protocol_ipv4 {
 			sip = evs.Int32ToIp(addr.Address.GetIpv4()).String()
 		}
-		if addr.Protocol == evs.Protocol_ipv6 {
+		if addr.Protocol == pb.Protocol_ipv6 {
 			sip = evs.BytesToIp(addr.Address.GetIpv6()).String()
 		}
 	}
 	for _, addr := range ev.Dest {
-		if addr.Protocol == evs.Protocol_ipv4 {
+		if addr.Protocol == pb.Protocol_ipv4 {
 			dip = evs.Int32ToIp(addr.Address.GetIpv4()).String()
 		}
-		if addr.Protocol == evs.Protocol_ipv6 {
+		if addr.Protocol == pb.Protocol_ipv6 {
 			dip = evs.BytesToIp(addr.Address.GetIpv6()).String()
 		}
 	}
@@ -221,13 +222,13 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 	deve := NewDevice(ev.Device).
 		AddTime(tm).
 		AddCount(1)
-	if ev.Origin == evs.Origin_device {
+	if ev.Origin == pb.Origin_device {
 		entities = append(entities, deve)
 		hasipe := NewHasip(ev.Device, sip).
 			AddTime(tm).
 			AddCount(1)
 		edges = append(edges, hasipe)
-	} else if ev.Origin == evs.Origin_network {
+	} else if ev.Origin == pb.Origin_network {
 		entities = append(entities, deve)
 		hasipe := NewHasip(ev.Device, dip).
 			AddTime(tm).
@@ -239,11 +240,11 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 	switch ev.Detail.(type) {
 
 	// DNS message
-	case *evs.Event_DnsMessage:
+	case *pb.Event_DnsMessage:
 
 		msg := ev.GetDnsMessage()
 
-		if msg.Type == evs.DnsMessageType_query {
+		if msg.Type == pb.DnsMessageType_query {
 
 			// Handle query as dnsquery edges
 
@@ -273,7 +274,7 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 				}
 
 			}
-		} else if msg.Type == evs.DnsMessageType_response {
+		} else if msg.Type == pb.DnsMessageType_response {
 
 			// Handle response as dnsresolve edges
 
@@ -306,7 +307,7 @@ func DescribeThreatElements(ev *evs.Event) ([]*Entity, []*Edge, error) {
 			}
 		}
 
-	case *evs.Event_HttpRequest:
+	case *pb.Event_HttpRequest:
 
 		// HTTP request record has/useragent, requests/server  and
 		// serves/server.

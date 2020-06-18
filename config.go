@@ -2,10 +2,16 @@ package main
 
 import (
 	"time"
+	"github.com/cybermaggedon/evs-golang-api"
+	"os"
+	"strconv"
+	"log"
 )
 
 // Configuration settings for Gaffer
 type Config struct {
+
+	*evs.Config
 
 	// Gaffer URL
 	url string
@@ -29,7 +35,11 @@ type Config struct {
 
 // Create a new configuration with default values
 func NewConfig() *Config {
-	return &Config{
+
+	bc := evs.NewConfig("evs-threatgraph", "ioc")
+
+	c := &Config{
+		Config:                  bc,
 		url:                     "http://threatgraph:8080/rest/v2",
 		max_idle_conns:          50,
 		max_idle_conns_per_host: 5,
@@ -37,40 +47,72 @@ func NewConfig() *Config {
 		refresh_time:            30 * time.Second,
 		flush_time:              1 * time.Second,
 	}
+	
+	// Override configuration with values set in environment
+	if val, ok := os.LookupEnv("GAFFER_URL"); ok {
+		c.Url(val)
+	}
+	if val, ok := os.LookupEnv("MAX_IDLE_CONNS"); ok {
+		max, _ := strconv.Atoi(val)
+		c.MaxIdleConns(uint(max))
+	}
+	if val, ok := os.LookupEnv("MAX_IDLE_CONNS_PER_HOST"); ok {
+		max, _ := strconv.Atoi(val)
+		c.MaxIdleConnsPerHost(uint(max))
+	}
+	if val, ok := os.LookupEnv("CONNECT_TIMEOUT"); ok {
+		dur, err := time.ParseDuration(val)
+		if err != nil {
+			log.Print(err)
+		}
+		c.ConnectTimeout(dur)
+	}
+	if val, ok := os.LookupEnv("REFRESH_TIME"); ok {
+		dur, err := time.ParseDuration(val)
+		if err != nil {
+			log.Print(err)
+		}
+		c.RefreshTime(dur)
+	}
+	if val, ok := os.LookupEnv("FLUSH_TIME"); ok {
+		dur, err := time.ParseDuration(val)
+		if err != nil {
+			log.Print(err)
+		}
+		c.FlushTime(dur)
+	}
+	
+	return c
+
+
 }
 
 // Set Gaffer URL setting
-func (c Config) Url(val string) *Config {
+func (c *Config) Url(val string) {
 	c.url = val
-	return &c
 }
 
 // Set max idle connection count
-func (c Config) MaxIdleConns(val uint) *Config {
+func (c *Config) MaxIdleConns(val uint) {
 	c.max_idle_conns = val
-	return &c
 }
 
 // Set max idle connection per host count
-func (c Config) MaxIdleConnsPerHost(val uint) *Config {
+func (c *Config) MaxIdleConnsPerHost(val uint) {
 	c.max_idle_conns_per_host = val
-	return &c
 }
 
 // Set connection setup timeout
-func (c Config) ConnectTimeout(val time.Duration) *Config {
+func (c *Config) ConnectTimeout(val time.Duration) {
 	c.connect_timeout = val
-	return &c
 }
 
 // Set refresh interval for idle connections
-func (c Config) RefreshTime(val time.Duration) *Config {
+func (c *Config) RefreshTime(val time.Duration) {
 	c.refresh_time = val
-	return &c
 }
 
 // Set buffer flush interval
-func (c Config) FlushTime(val time.Duration) *Config {
+func (c *Config) FlushTime(val time.Duration) {
 	c.flush_time = val
-	return &c
 }
