@@ -1,16 +1,15 @@
 package main
 
 import (
-	"time"
 	"github.com/cybermaggedon/evs-golang-api"
+	"log"
 	"os"
 	"strconv"
-	"log"
+	"time"
 )
 
 // Configuration settings for Gaffer
 type Config struct {
-
 	*evs.Config
 
 	// Gaffer URL
@@ -47,7 +46,7 @@ func NewConfig() *Config {
 		refresh_time:            30 * time.Second,
 		flush_time:              1 * time.Second,
 	}
-	
+
 	// Override configuration with values set in environment
 	if val, ok := os.LookupEnv("GAFFER_URL"); ok {
 		c.Url(val)
@@ -81,9 +80,8 @@ func NewConfig() *Config {
 		}
 		c.FlushTime(dur)
 	}
-	
-	return c
 
+	return c
 
 }
 

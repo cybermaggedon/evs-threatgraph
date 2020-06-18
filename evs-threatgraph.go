@@ -9,9 +9,8 @@ import (
 const ()
 
 type ThreatGraph struct {
-
 	*Config
-	
+
 	// Embed EventAnalytic framework
 	*evs.EventSubscriber
 	evs.Interruptible
