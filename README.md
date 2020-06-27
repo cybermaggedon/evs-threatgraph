@@ -46,7 +46,7 @@ The following environment variables are used to configure:
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `INPUT` | Specifies the Pulsar topic to subscribe to.  This is just the topic part of the URL e.g. `cyberprobe`. | `ioc` |
+| `INPUT` | Specifies the Pulsar topic to subscribe to.  This is just the topic part of the URL e.g. `cyberprobe`. | `withioc` |
 | `METRICS_PORT` | Specifies the port number to serve Prometheus metrics on.  If not set, metrics will not be served. The container has a default setting of 8088. | `8088` |
-| `GAFFER_URL` | Specifies the GAFFER REST v2 API. | `http://localhost:8080/rest/v2` |
+| `GAFFER_URL` | Specifies the GAFFER REST v2 API. | `http://gaffer-threat:8080/rest/v2` |
 
