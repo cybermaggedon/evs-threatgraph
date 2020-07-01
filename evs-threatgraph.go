@@ -27,7 +27,7 @@ func NewThreatGraph(c *Config) *ThreatGraph {
 	}
 
 	var err error
-	t.EventSubscriber, err = evs.NewEventSubscriber(t.Name, t.Input, t)
+	t.EventSubscriber, err = evs.NewEventSubscriber(t, t)
 	if err != nil {
 		log.Fatal(err)
 	}
