@@ -168,6 +168,7 @@ func NewUseragent(v string) *Entity { return NewEntity(v, "useragent") }
 
 // Helper functions to create various edges
 func NewIpflow(src, dest string) *Edge { return NewEdge(src, dest, "ipflow") }
+func NewConnects(s, d string) *Edge    { return NewEdge(s, d, "connects") }
 func NewHasip(s, d string) *Edge       { return NewEdge(s, d, "hasip") }
 func NewDnsquery(s, d string) *Edge    { return NewEdge(s, d, "dnsquery") }
 func NewDnsresolve(s, d string) *Edge  { return NewEdge(s, d, "dnsresolve") }
@@ -175,6 +176,18 @@ func NewIndomain(s, d string) *Edge    { return NewEdge(s, d, "indomain") }
 func NewRequests(s, d string) *Edge    { return NewEdge(s, d, "requests") }
 func NewServes(s, d string) *Edge      { return NewEdge(s, d, "serves") }
 func NewUses(s, d string) *Edge        { return NewEdge(s, d, "uses") }
+
+// Model is...
+//   Ip -- (Ipflow) --> Ip
+//   Device -- (HasIp) --> Ip
+//   Device -- (Connects) --> Ip
+//   Device -- (Dnsquery) --> Hostname
+//   Hostname -- (Indomain) --> Domain
+//   Hostname -- (Dnsresolve) --> Address
+//   Device -- (Requests) --> Server
+//   Ip -- (Serves) --> Server
+//   Device -- (Uses) --> Useragent
+
 
 // Takes an event and outputs the threatgraph elements.
 func DescribeThreatElements(ev *pb.Event) ([]*Entity, []*Edge, error) {
@@ -236,6 +249,21 @@ func DescribeThreatElements(ev *pb.Event) ([]*Entity, []*Edge, error) {
 		edges = append(edges, hasipe)
 	}
 
+	// Add connects edge between device and IP
+	if ev.Origin == pb.Origin_device {
+		entities = append(entities, deve)
+		hasipe := NewConnects(ev.Device, dip).
+			AddTime(tm).
+			AddCount(1)
+		edges = append(edges, hasipe)
+	} else if ev.Origin == pb.Origin_network {
+		entities = append(entities, deve)
+		hasipe := NewConnects(ev.Device, sip).
+			AddTime(tm).
+			AddCount(1)
+		edges = append(edges, hasipe)
+	}
+
 	// Get into protocol detail
 	switch ev.Detail.(type) {
 
@@ -254,7 +282,7 @@ func DescribeThreatElements(ev *pb.Event) ([]*Entity, []*Edge, error) {
 						AddTime(tm).
 						AddCount(1)
 					entities = append(entities, hoste)
-					dnsqe := NewDnsquery(sip, v.Name).
+					dnsqe := NewDnsquery(ev.Device, v.Name).
 						AddTime(tm).
 						AddCount(1)
 					edges = append(edges, dnsqe)
@@ -323,7 +351,7 @@ func DescribeThreatElements(ev *pb.Event) ([]*Entity, []*Edge, error) {
 				AddCount(1)
 			entities = append(entities, servere)
 
-			requestse := NewRequests(sip, host).
+			requestse := NewRequests(ev.Device, host).
 				AddTime(tm).
 				AddCount(1)
 			edges = append(edges, requestse)
@@ -341,7 +369,7 @@ func DescribeThreatElements(ev *pb.Event) ([]*Entity, []*Edge, error) {
 				AddCount(1)
 			entities = append(entities, uae)
 
-			usesagent := NewUses(sip, ua).
+			usesagent := NewUses(ev.Device, ua).
 				AddTime(tm).
 				AddCount(1)
 			edges = append(edges, usesagent)
