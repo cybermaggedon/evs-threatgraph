@@ -1,6 +1,7 @@
 
 FROM fedora:32
 
+RUN dnf install -y libgo && dnf clean all
 COPY evs-threatgraph /usr/local/bin/
 
 ENV PULSAR_BROKER=pulsar://exchange:6650
